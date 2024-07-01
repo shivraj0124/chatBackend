@@ -14,7 +14,7 @@ const messageRoutes = require("./Routes/messageRoutes");
 app.use(express.json());
 app.use(
   cors({
-    origin: "*", // Set specific origin
+    origin: "https://chatease24.netlify.app", // Set specific origin
     credentials: true, // Allow credentials
   })
 );
