@@ -14,7 +14,7 @@ const messageRoutes = require("./Routes/messageRoutes");
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173", // Set specific origin
+    origin: "*", // Set specific origin
     credentials: true, // Allow credentials
   })
 );
