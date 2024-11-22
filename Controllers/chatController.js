@@ -1,64 +1,132 @@
 const express = require("express");
 const Chat = require("../Models/chatModel");
 const User = require("../Models/userModel");
+// const accessChats = async (req, res) => {
+//   const { userId } = req.body;
+//   if (!userId) {
+//     return res.send({
+//       success: false,
+//       message: "User Id Not Found",
+//     });
+//   }
+
+//   let isChat = await Chat.find({
+//     isGroupChat: false,
+//     $and: [
+//       {
+//         users: { $elemMatch: { $eq: req.user._id } },
+//       },
+//       {
+//         users: { $elemMatch: { $eq: userId } },
+//       },
+//     ],
+//   })
+//     .populate("users", "-password")
+//     .populate("latestMessage");
+
+//   isChat = await User.populate(isChat, {
+//     path: "latestMessage.sender",
+//     select: "name email",
+//   });
+
+//   if (isChat.length > 0) {
+//     res.send({
+//       success: true,
+//       message: "Chats Accessed",
+//       data: isChat[0],
+//     });
+//   } else {
+//     let chatData = {
+//       chatName: "sender",
+//       isGroupChat: false,
+//       users: [req.user._id, userId],
+//     };
+
+//     try {
+//       const createdChat = await Chat.create(chatData);
+//       const fullChat = await Chat.findOne({ _id: createdChat._id }).populate(
+//         "users",
+//         "-password"
+//       );
+//       res.send({
+//         success: true,
+//         message: "Chat created and accessed Chats Accessed",
+//         data: fullChat,
+//       });
+//     } catch (err) {
+//       res.send({
+//         success: false,
+//         message: "Something Went Wrong",
+//       });
+//     }
+//   }
+// };
+
+//  updated access chat
 const accessChats = async (req, res) => {
   const { userId } = req.body;
+
+  // Validate request data
   if (!userId) {
-    return res.send({
+    return res.status(400).json({
       success: false,
-      message: "User Id Not Found",
+      message: "User ID is required.",
     });
   }
 
-  let isChat = await Chat.find({
-    isGroupChat: false,
-    $and: [
-      {
-        users: { $elemMatch: { $eq: req.user._id } },
-      },
-      {
-        users: { $elemMatch: { $eq: userId } },
-      },
-    ],
-  })
-    .populate("users", "-password")
-    .populate("latestMessage");
+  try {
+    // Check if a chat already exists
+    let chat = await Chat.findOne({
+      isGroupChat: false,
+      $and: [
+        { users: { $elemMatch: { $eq: req.user._id } } },
+        { users: { $elemMatch: { $eq: userId } } },
+      ],
+    })
+      .populate("users", "-password")
+      .populate("latestMessage");
 
-  isChat = await User.populate(isChat, {
-    path: "latestMessage.sender",
-    select: "name email",
-  });
+    if (chat) {
+      // Populate sender details in the latest message
+      chat = await User.populate(chat, {
+        path: "latestMessage.sender",
+        select: "name email",
+      });
 
-  if (isChat.length > 0) {
-    res.send({
-      success: true,
-      message: "Chats Accessed",
-      data: isChat[0],
-    });
-  } else {
-    let chatData = {
+      return res.status(200).json({
+        success: true,
+        message: "Chat found.",
+        data: chat,
+      });
+    }
+
+    // Create a new chat if none exists
+    const chatData = {
       chatName: "sender",
       isGroupChat: false,
       users: [req.user._id, userId],
     };
 
-    try {
-      const createdChat = await Chat.create(chatData);
-      const fullChat = await Chat.findOne({ _id: createdChat._id }).populate(
-        "users",
-        "-password"
-      );
-      res.send({
-        success: true,
-        message: "Chat created and accessed Chats Accessed",
-        data: fullChat,
-      });
-    } catch (err) {
-      res.send({
-        success: false,
-        message: "Something Went Wrong",
-      });
-    }
+    const createdChat = await Chat.create(chatData);
+
+    const fullChat = await Chat.findById(createdChat._id).populate(
+      "users",
+      "-password"
+    );
+
+    return res.status(201).json({
+      success: true,
+      message: "New chat created.",
+      data: fullChat,
+    });
+  } catch (error) {
+    console.error("Error accessing chats:", error);
+
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while accessing chats.",
+      error: error.message,
+    });
   }
 };
 
